@@ -1,5 +1,11 @@
 # 📦 Warehouse Management System
 
+<img width="1917" height="958" alt="Screenshot 2025-12-19 194401" src="https://github.com/user-attachments/assets/a921c761-b733-446b-8a59-789616744dc4" />
+<img width="1907" height="855" alt="Screenshot 2025-12-19 194521" src="https://github.com/user-attachments/assets/2d93f558-81a5-41e4-bb8a-9a86ef589176" />
+<img width="1917" height="960" alt="Screenshot 2025-12-19 194514" src="https://github.com/user-attachments/assets/9648f92c-b676-4cf3-a63a-b4d0d9ce6ac2" />
+<img width="1918" height="963" alt="Screenshot 2025-12-19 194501" src="https://github.com/user-attachments/assets/d7bdce2a-bb60-4f0f-800c-cde09d8a27cb" />
+
+
 A **full-stack Warehouse Management System** built using **React (Next.js)** for the frontend, **Spring Boot** for the backend, and **MySQL** as the database.
 This project provides product inventory management, order processing, stock tracking, and a dashboard with analytics.
 
@@ -73,6 +79,8 @@ npm run dev
 ---
 
 ## ⚙️ Backend (Spring Boot)
+
+<img width="1919" height="1019" alt="Screenshot 2025-12-19 194425" src="https://github.com/user-attachments/assets/a41fe908-e7c2-49f1-af66-edd0a4ff9b52" />
 
 * REST APIs built with Spring Boot
 * Uses Spring Data JPA + Hibernate
