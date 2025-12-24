@@ -1,6 +1,7 @@
 package com.warehouse.entity;
 
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
 @Entity
@@ -13,10 +14,13 @@ public class Order {
 
     private LocalDateTime orderDate;
 
-    // PART 2: ORDER STATUS
     private String status; // PENDING, SHIPPED, DELIVERED
 
-    // getters & setters
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    @JsonIgnoreProperties({"password"})
+    private User user;
+
     public Long getId() {
         return id;
     }
@@ -35,5 +39,13 @@ public class Order {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 }

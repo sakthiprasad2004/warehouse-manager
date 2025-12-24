@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { orderApi, productApi, Order, OrderItem, Product, CreateOrderItem } from "@/lib/api";
+import { useRouter } from "next/navigation";
+import { orderApi, productApi, Order, OrderItem, Product, CreateOrderItem, getStoredUser } from "@/lib/api";
 import { Sidebar } from "@/components/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [itemsDialogOpen, setItemsDialogOpen] = useState(false);
@@ -48,7 +50,10 @@ export default function OrdersPage() {
   const [formItems, setFormItems] = useState<CreateOrderItem[]>([{ productId: 0, quantity: 1 }]);
   const [saving, setSaving] = useState(false);
 
+  const router = useRouter();
+
   const loadOrders = async () => {
+    setLoading(true);
     try {
       const res = await orderApi.getAll();
       setOrders(res.data);
@@ -69,9 +74,19 @@ export default function OrdersPage() {
   };
 
   useEffect(() => {
+    const stored = getStoredUser();
+    if (!stored?.id) {
+      router.replace("/login");
+      return;
+    }
+    setAuthChecked(true);
+  }, [router]);
+
+  useEffect(() => {
+    if (!authChecked) return;
     loadOrders();
     loadProducts();
-  }, []);
+  }, [authChecked]);
 
   const viewItems = async (order: Order) => {
     setSelectedOrder(order);

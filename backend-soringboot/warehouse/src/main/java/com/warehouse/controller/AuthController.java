@@ -39,11 +39,17 @@ public class AuthController {
     @PostMapping("/register")
     public User register(@RequestBody LoginRequest request) {
 
+        userRepo.findByUsername(request.getUsername()).ifPresent(u -> {
+            throw new RuntimeException("Username already exists");
+        });
+
         User user = new User();
         user.setUsername(request.getUsername());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
 
-        return userRepo.save(user);
+        User saved = userRepo.save(user);
+        saved.setPassword(null);
+        return saved;
     }
 }
 

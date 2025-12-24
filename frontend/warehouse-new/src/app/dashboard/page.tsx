@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { productApi, orderApi, Product, Order } from "@/lib/api";
+import { productApi, orderApi, Product, Order, getStoredUser } from "@/lib/api";
 import { Sidebar } from "@/components/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package, ShoppingCart, TrendingUp, AlertTriangle } from "lucide-react";
@@ -32,12 +32,12 @@ export default function Dashboard() {
 
   // 🔐 AUTH GUARD
   useEffect(() => {
-    const user = localStorage.getItem("user");
+    const user = getStoredUser();
     if (!user) {
       router.replace("/login");
-    } else {
-      setAuthChecked(true);
+      return;
     }
+    setAuthChecked(true);
   }, [router]);
 
   // 📦 LOAD DATA

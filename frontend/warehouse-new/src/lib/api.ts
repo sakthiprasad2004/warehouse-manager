@@ -1,7 +1,34 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "http://localhost:8080/api"
+  baseURL: "http://localhost:8080/api",
+});
+
+export interface User {
+  id: number;
+  username: string;
+}
+
+export const getStoredUser = (): User | null => {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem("user");
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as User;
+  } catch {
+    return null;
+  }
+};
+
+API.interceptors.request.use((config) => {
+  const user = getStoredUser();
+  if (user?.id) {
+    config.params = {
+      ...(config.params || {}),
+      userId: user.id,
+    };
+  }
+  return config;
 });
 
 export interface Product {
@@ -9,6 +36,7 @@ export interface Product {
   name: string;
   price: number;
   quantity: number;
+  user?: User;
 }
 
 export interface OrderItem {
@@ -21,6 +49,7 @@ export interface Order {
   id: number;
   orderDate: string;
   status: "PENDING" | "SHIPPED" | "DELIVERED";
+  user?: User;
 }
 
 export const productApi = {

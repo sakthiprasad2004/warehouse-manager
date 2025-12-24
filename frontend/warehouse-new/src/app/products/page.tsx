@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { productApi, Product } from "@/lib/api";
+import { useRouter } from "next/navigation";
+import { productApi, Product, getStoredUser } from "@/lib/api";
 import { Sidebar } from "@/components/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,12 +32,16 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
 
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [quantity, setQuantity] = useState("");
 
+  const router = useRouter();
+
   const loadProducts = async () => {
+    setLoading(true);
     try {
       const res = await productApi.getAll();
       setProducts(res.data);
@@ -48,8 +53,18 @@ export default function ProductsPage() {
   };
 
   useEffect(() => {
+    const stored = getStoredUser();
+    if (!stored?.id) {
+      router.replace("/login");
+      return;
+    }
+    setAuthChecked(true);
+  }, [router]);
+
+  useEffect(() => {
+    if (!authChecked) return;
     loadProducts();
-  }, []);
+  }, [authChecked]);
 
   const resetForm = () => {
     setName("");

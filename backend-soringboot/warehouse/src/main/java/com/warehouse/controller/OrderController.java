@@ -9,9 +9,11 @@ import org.springframework.web.bind.annotation.*;
 import com.warehouse.entity.Order;
 import com.warehouse.entity.OrderItem;
 import com.warehouse.entity.Product;
+import com.warehouse.entity.User;
 import com.warehouse.repository.OrderItemRepository;
 import com.warehouse.repository.OrderRepository;
 import com.warehouse.repository.ProductRepository;
+import com.warehouse.repository.UserRepository;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -27,15 +29,23 @@ public class OrderController {
     @Autowired
     private OrderItemRepository orderItemRepo;
 
+    @Autowired
+    private UserRepository userRepo;
+
     // =========================
     // CREATE ORDER + ITEMS
     // =========================
     @PostMapping
-    public Order createOrder(@RequestBody(required = false) CreateOrderRequest request) {
+    public Order createOrder(
+            @RequestBody(required = false) CreateOrderRequest request,
+            @RequestParam Long userId) {
+
+        User user = getUser(userId);
 
         Order order = new Order();
         order.setOrderDate(LocalDateTime.now());
         order.setStatus("PENDING");
+        order.setUser(user);
         Order savedOrder = orderRepo.save(order);
 
         // Save order items (NO stock reduction here)
@@ -43,6 +53,8 @@ public class OrderController {
             for (CreateOrderItem item : request.getItems()) {
                 Product product = productRepo.findById(item.getProductId())
                         .orElseThrow(() -> new RuntimeException("Product not found"));
+
+                validateProductOwnership(product, userId);
 
                 if (product.getQuantity() < item.getQuantity()) {
                     throw new RuntimeException("Not enough stock for " + product.getName());
@@ -63,15 +75,20 @@ public class OrderController {
     // GET ALL ORDERS
     // =========================
     @GetMapping
-    public List<Order> getOrders() {
-        return orderRepo.findAll();
+    public List<Order> getOrders(@RequestParam Long userId) {
+        return orderRepo.findByUserId(userId);
     }
 
     // =========================
     // GET ORDER ITEMS
     // =========================
     @GetMapping("/{orderId}/items")
-    public List<OrderItem> getOrderItems(@PathVariable Long orderId) {
+    public List<OrderItem> getOrderItems(
+            @PathVariable Long orderId,
+            @RequestParam Long userId) {
+
+        Order order = orderRepo.findById(orderId).orElseThrow();
+        validateOrderOwnership(order, userId);
         return orderItemRepo.findByOrderId(orderId);
     }
 
@@ -82,9 +99,11 @@ public class OrderController {
     @PutMapping("/{id}/status")
     public Order updateStatus(
             @PathVariable Long id,
-            @RequestParam String status) {
+            @RequestParam String status,
+            @RequestParam Long userId) {
 
         Order order = orderRepo.findById(id).orElseThrow();
+        validateOrderOwnership(order, userId);
         String oldStatus = order.getStatus();
 
         // Reduce inventory ONLY when moving to SHIPPED
@@ -113,12 +132,35 @@ public class OrderController {
     @PutMapping("/{id}")
     public Order updateOrder(
             @PathVariable Long id,
-            @RequestBody Order updatedOrder) {
+            @RequestBody(required = false) CreateOrderRequest updatedOrder,
+            @RequestParam Long userId) {
 
         Order order = orderRepo.findById(id).orElseThrow();
+        validateOrderOwnership(order, userId);
 
-        if (updatedOrder.getStatus() != null) {
-            order.setStatus(updatedOrder.getStatus());
+        if (!"PENDING".equals(order.getStatus())) {
+            throw new RuntimeException("Only pending orders can be edited");
+        }
+
+        if (updatedOrder != null && updatedOrder.getItems() != null) {
+            List<OrderItem> existingItems = orderItemRepo.findByOrderId(id);
+            orderItemRepo.deleteAll(existingItems);
+            for (CreateOrderItem item : updatedOrder.getItems()) {
+                Product product = productRepo.findById(item.getProductId())
+                        .orElseThrow(() -> new RuntimeException("Product not found"));
+
+                validateProductOwnership(product, userId);
+
+                if (product.getQuantity() < item.getQuantity()) {
+                    throw new RuntimeException("Not enough stock for " + product.getName());
+                }
+
+                OrderItem orderItem = new OrderItem();
+                orderItem.setOrder(order);
+                orderItem.setProduct(product);
+                orderItem.setQuantity(item.getQuantity());
+                orderItemRepo.save(orderItem);
+            }
         }
 
         return orderRepo.save(order);
@@ -129,9 +171,10 @@ public class OrderController {
     // (RESTORE STOCK IF SHIPPED)
     // =========================
     @DeleteMapping("/{id}")
-    public void deleteOrder(@PathVariable Long id) {
+    public void deleteOrder(@PathVariable Long id, @RequestParam Long userId) {
 
         Order order = orderRepo.findById(id).orElseThrow();
+        validateOrderOwnership(order, userId);
         List<OrderItem> items = orderItemRepo.findByOrderId(id);
 
         if ("SHIPPED".equals(order.getStatus()) || "DELIVERED".equals(order.getStatus())) {
@@ -144,6 +187,22 @@ public class OrderController {
 
         orderItemRepo.deleteAll(items);
         orderRepo.deleteById(id);
+    }
+
+    private User getUser(Long userId) {
+        return userRepo.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
+    private void validateOrderOwnership(Order order, Long userId) {
+        if (order.getUser() == null || !order.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Unauthorized access to order");
+        }
+    }
+
+    private void validateProductOwnership(Product product, Long userId) {
+        if (product.getUser() == null || !product.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Product does not belong to this user");
+        }
     }
 }
 
